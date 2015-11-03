@@ -57,7 +57,7 @@
     Param (
         [parameter(ValueFromPipeline=$True, ValueFromPipelineByPropertyName=$True)]
         [Alias('FullName','PSPath')]
-        $Path = $PWD.ToString(),
+        [string[]]$Path = $PWD.ToString(),
         [parameter()]
         [string]$Filter,
         [parameter()]
@@ -220,124 +220,125 @@
             [void]$TypeBuilder.CreateType()
             #endregion Create Type    
         }
-
-        #region Inititalize Data
-        $Found = $True    
-        $findData = New-Object WIN32_FIND_DATA 
-        #endregion Inititalize Data
     }
     Process {
-        If ($Path -notmatch '^[a-z]:|^\\\\') {
-            $Path = Convert-Path $Path
-        }
-        If ($Path.Endswith('\')) {
-            $SearchPath = "$($Path)*"
-        } ElseIf ($Path.EndsWith(':')) {
-            $SearchPath = "$($Path)\*"
-            $Path = "$($Path)\"
-        } ElseIf ($Path.Endswith('*')) {
-            $SearchPath = $Path
-        } Else {
-            $SearchPath = "$($Path)\*"
-            $path = "$($Path)\"
-        }
-        If (-NOT $Path.StartsWith('\\')) {
-            $Path = "\\?\$($Path)"
-            $SearchPath = "\\?\$($SearchPath)"
-        }
-        If ($PSBoundParameters.ContainsKey('Recurse') -AND (-NOT $PSBoundParameters.ContainsKey('Depth'))) {
-            $PSBoundParameters.Depth = [int]::MaxValue
-            $Depth = [int]::MaxValue
-        }
-        If (-NOT $PSBoundParameters.ContainsKey('Recurse') -AND ($PSBoundParameters.ContainsKey('Depth'))) {
-            Throw "Cannot set Depth without Recurse parameter!"
-        }
-        Write-Verbose "Search: $($SearchPath)"
-        Write-Verbose "Depth: $($Script:Count)"
-        $Handle = [poshfile]::FindFirstFile("$SearchPath",[ref]$findData)
-        If ($Handle -ne -1) {
-            While ($Found) {
-                If ($findData.cFileName -notmatch '^(\.){1,2}$') {
-                    $IsDirectory =  [bool]($findData.dwFileAttributes -BAND 16)  
-                    $FullName = "$($Path)$($findData.cFileName)"
-                    $Mode = New-Object System.Text.StringBuilder                    
-                    If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::Directory) {
-                        [void]$Mode.Append('d')
-                    } Else {
-                        [void]$Mode.Append('-')
-                    }
-                    If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::Archive) {
-                        [void]$Mode.Append('a')
-                    } Else {
-                        [void]$Mode.Append('-')
-                    }
-                    If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::ReadOnly) {
-                        [void]$Mode.Append('r')
-                    } Else {
-                        [void]$Mode.Append('-')
-                    }
-                    If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::Hidden) {
-                        [void]$Mode.Append('h')
-                    } Else {
-                        [void]$Mode.Append('-')
-                    }
-                    If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::System) {
-                        [void]$Mode.Append('s')
-                    } Else {
-                        [void]$Mode.Append('-')
-                    }
-                    If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::ReparsePoint) {
-                        [void]$Mode.Append('l')
-                    } Else {
-                        [void]$Mode.Append('-')
-                    }
-                    $Fullname = ([string]$FullName).replace('\\?\','')
-                    $Object = New-Object PSObject -Property @{
-                        Name = [string]$findData.cFileName
-                        FullName = $Fullname
-                        Length = $Null                       
-                        Attributes = [System.IO.FileAttributes]$findData.dwFileAttributes
-                        LastWriteTime = [datetime]::FromFileTime($findData.ftLastWriteTime)
-                        LastAccessTime = [datetime]::FromFileTime($findData.ftLastAccessTime)
-                        CreationTime = [datetime]::FromFileTime($findData.ftCreationTime)
-                        PSIsContainer = [bool]$IsDirectory
-                        Mode = $Mode.ToString()
-                    }    
-                    If ($Object.PSIsContainer) {
-                        $Object.pstypenames.insert(0,'System.Io.DirectoryInfo')
-                    } Else {
-                        $Object.Length = [int64]("0x{0:x}" -f $findData.nFileSizeLow)
-                        $Object.pstypenames.insert(0,'System.Io.FileInfo')
-                    }
-                    If ($PSBoundParameters.ContainsKey('Directory') -AND $Object.PSIsContainer) {                            
-                        $ToOutPut = $Object
-                    } ElseIf ($PSBoundParameters.ContainsKey('File') -AND (-NOT $Object.PSIsContainer)) {
-                        $ToOutPut = $Object
-                    }
-                    If (-Not ($PSBoundParameters.ContainsKey('Directory') -OR $PSBoundParameters.ContainsKey('File'))) {
-                        $ToOutPut = $Object
-                    } 
-                    If ($PSBoundParameters.ContainsKey('Filter')) {
-                        If (-NOT ($ToOutPut.Name -like $Filter)) {
+            ForEach ($Item in $Path ) {
+            #region Inititalize Data
+            $Found = $True    
+            $findData = New-Object WIN32_FIND_DATA 
+            #endregion Inititalize Data
+            If ($Item -notmatch '^[a-z]:|^\\\\') {
+                $Item = Convert-Path $Item
+            }
+            If ($Item.Endswith('\')) {
+                $SearchPath = "$($Item)*"
+            } ElseIf ($Item.EndsWith(':')) {
+                $SearchPath = "$($Item)\*"
+                $Item = "$($Item)\"
+            } ElseIf ($Item.Endswith('*')) {
+                $SearchPath = $Item
+            } Else {
+                $SearchPath = "$($Item)\*"
+                $Item = "$($Item)\"
+            }
+            If (-NOT $Item.StartsWith('\\')) {
+                $Item = "\\?\$($Item)"
+                $SearchPath = "\\?\$($SearchPath)"
+            }
+            If ($PSBoundParameters.ContainsKey('Recurse') -AND (-NOT $PSBoundParameters.ContainsKey('Depth'))) {
+                $PSBoundParameters.Depth = [int]::MaxValue
+                $Depth = [int]::MaxValue
+            }
+            If (-NOT $PSBoundParameters.ContainsKey('Recurse') -AND ($PSBoundParameters.ContainsKey('Depth'))) {
+                Throw "Cannot set Depth without Recurse parameter!"
+            }
+            Write-Verbose "Search: $($SearchPath)"
+            Write-Verbose "Depth: $($Script:Count)"
+            $Handle = [poshfile]::FindFirstFile("$SearchPath",[ref]$findData)
+            If ($Handle -ne -1) {
+                While ($Found) {
+                    If ($findData.cFileName -notmatch '^(\.){1,2}$') {
+                        $IsDirectory =  [bool]($findData.dwFileAttributes -BAND 16)  
+                        $FullName = "$($Item)$($findData.cFileName)"
+                        $Mode = New-Object System.Text.StringBuilder                    
+                        If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::Directory) {
+                            [void]$Mode.Append('d')
+                        } Else {
+                            [void]$Mode.Append('-')
+                        }
+                        If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::Archive) {
+                            [void]$Mode.Append('a')
+                        } Else {
+                            [void]$Mode.Append('-')
+                        }
+                        If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::ReadOnly) {
+                            [void]$Mode.Append('r')
+                        } Else {
+                            [void]$Mode.Append('-')
+                        }
+                        If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::Hidden) {
+                            [void]$Mode.Append('h')
+                        } Else {
+                            [void]$Mode.Append('-')
+                        }
+                        If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::System) {
+                            [void]$Mode.Append('s')
+                        } Else {
+                            [void]$Mode.Append('-')
+                        }
+                        If ($findData.dwFileAttributes -BAND [System.IO.FileAttributes]::ReparsePoint) {
+                            [void]$Mode.Append('l')
+                        } Else {
+                            [void]$Mode.Append('-')
+                        }
+                        $Fullname = ([string]$FullName).replace('\\?\','')
+                        $Object = New-Object PSObject -Property @{
+                            Name = [string]$findData.cFileName
+                            FullName = $Fullname
+                            Length = $Null                       
+                            Attributes = [System.IO.FileAttributes]$findData.dwFileAttributes
+                            LastWriteTime = [datetime]::FromFileTime($findData.ftLastWriteTime)
+                            LastAccessTime = [datetime]::FromFileTime($findData.ftLastAccessTime)
+                            CreationTime = [datetime]::FromFileTime($findData.ftCreationTime)
+                            PSIsContainer = [bool]$IsDirectory
+                            Mode = $Mode.ToString()
+                        }    
+                        If ($Object.PSIsContainer) {
+                            $Object.pstypenames.insert(0,'System.Io.DirectoryInfo')
+                        } Else {
+                            $Object.Length = [int64]("0x{0:x}" -f $findData.nFileSizeLow)
+                            $Object.pstypenames.insert(0,'System.Io.FileInfo')
+                        }
+                        If ($PSBoundParameters.ContainsKey('Directory') -AND $Object.PSIsContainer) {                            
+                            $ToOutPut = $Object
+                        } ElseIf ($PSBoundParameters.ContainsKey('File') -AND (-NOT $Object.PSIsContainer)) {
+                            $ToOutPut = $Object
+                        }
+                        If (-Not ($PSBoundParameters.ContainsKey('Directory') -OR $PSBoundParameters.ContainsKey('File'))) {
+                            $ToOutPut = $Object
+                        } 
+                        If ($PSBoundParameters.ContainsKey('Filter')) {
+                            If (-NOT ($ToOutPut.Name -like $Filter)) {
+                                $ToOutPut = $Null
+                            }
+                        }
+                        If ($ToOutPut) {
+                            $ToOutPut
                             $ToOutPut = $Null
                         }
+                        If ($Recurse -AND $IsDirectory -AND ($PSBoundParameters.ContainsKey('Depth') -AND [int]$Script:Count -lt $Depth)) {                        
+                            #Dive deeper
+                            Write-Verbose "Recursive"
+                            $Script:Count++
+                            $PSBoundParameters.Path = $FullName
+                            Get-ChildItem2 @PSBoundParameters
+                            $Script:Count--
+                        }
                     }
-                    If ($ToOutPut) {
-                        $ToOutPut
-                        $ToOutPut = $Null
-                    }
-                    If ($Recurse -AND $IsDirectory -AND ($PSBoundParameters.ContainsKey('Depth') -AND [int]$Script:Count -lt $Depth)) {                        
-                        #Dive deeper
-                        Write-Verbose "Recursive"
-                        $Script:Count++
-                        $PSBoundParameters.Path = $FullName
-                        Get-ChildItem2 @PSBoundParameters
-                        $Script:Count--
-                    }
+                    $Found = [poshfile]::FindNextFile($Handle,[ref]$findData)
                 }
-                $Found = [poshfile]::FindNextFile($Handle,[ref]$findData)
+                [void][PoshFile]::FindClose($Handle)
             }
-            [void][PoshFile]::FindClose($Handle)
         }
     }
 } 
